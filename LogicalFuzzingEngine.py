@@ -1,17 +1,21 @@
 from burp import IBurpExtender
 from burp import IIntruderPayloadGeneratorFactory
 from burp import IIntruderPayloadGenerator
+from burp import IIntruderPayloadProcessor
 
+import json
 import re
 
 extendedTests = False
 
-class BurpExtender(IBurpExtender, IIntruderPayloadGeneratorFactory):
+class BurpExtender(IBurpExtender, IIntruderPayloadGeneratorFactory, IIntruderPayloadProcessor):
 	def registerExtenderCallbacks(self, callbacks):
 		self._callbacks = callbacks
 		self._helpers = callbacks.getHelpers()
 
 		callbacks.registerIntruderPayloadGeneratorFactory(self)
+
+		callbacks.registerIntruderPayloadProcessor(JsonProcessor())
 
 		return
 	
@@ -20,6 +24,14 @@ class BurpExtender(IBurpExtender, IIntruderPayloadGeneratorFactory):
 
 	def createNewInstance(self, attack):
 		return LogicalFuzzingEngine(self, attack)
+
+class JsonProcessor(IIntruderPayloadProcessor):
+	def getProcessorName(self):
+		return "JSON Processor"
+
+	def processPayload(self, currentPayload, originalPayload, baseValue):
+		payload = "".join(chr(x) for x in currentPayload)
+		return json.dumps(payload)[1:-1]
 
 class LogicalFuzzingEngine(IIntruderPayloadGenerator):
 	def __init__(self, extender, attack):
